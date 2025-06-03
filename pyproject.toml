@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zscheduler"
+version = "0.0.1"
+description = "A high-performance task scheduling application with an intuitive user interface."
+readme = "README.md"
+authors = [
+  { name = "Yusef Ulum", email = "yusef314159@gmail.com" }
+]
+license = { file = "LICENSE" }
+requires-python = ">=3.8"
+dependencies = [
+  "PyQt6>=6.4.0",
+  "pyqtgraph>=0.13.1",
+  "python-dateutil>=2.8.2"
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: End Users/Desktop",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: MacOS",
+  "Environment :: X11 Applications :: Qt",
+  "Topic :: Utilities"
+]
+
+[project.urls]
+Homepage = "https://github.com/mexyusef/zscheduler"
+
+[project.scripts]
+zscheduler-app = "zscheduler_app.main:main"
