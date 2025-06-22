@@ -128,16 +128,22 @@ def main():
         main_window = MainWindow(app_config, scheduler, json_store)
         main_window.show()
 
-        # Auto-save schedules when application exits
-        def save_schedules():
+        # Auto-save schedules and cleanup when application exits
+        def cleanup_and_save():
             try:
+                # Stop the scheduler first
+                logger.info("Stopping scheduler...")
+                scheduler.stop()
+
+                # Save schedules
                 schedules = scheduler.get_schedules()
                 json_store.save(schedules)
                 logger.info("Saved " + str(len(schedules)) + " schedule(s)")
+                logger.info("Application cleanup completed")
             except Exception as e:
-                logger.error("Error saving schedules: " + str(e))
+                logger.error("Error during cleanup: " + str(e))
 
-        app.aboutToQuit.connect(save_schedules)
+        app.aboutToQuit.connect(cleanup_and_save)
 
         # Start scheduler
         logger.info("Starting scheduler")

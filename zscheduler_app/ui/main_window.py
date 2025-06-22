@@ -99,7 +99,7 @@ class MainWindow(QMainWindow):
             self.tray_manager = SystemTrayManager()
             self.tray_manager.show_signal.connect(self.show)
             self.tray_manager.hide_signal.connect(self.hide)
-            self.tray_manager.exit_signal.connect(self.close)
+            self.tray_manager.exit_signal.connect(self._on_tray_exit)
         else:
             self.tray_manager = None
 
@@ -832,6 +832,13 @@ class MainWindow(QMainWindow):
         else:
             # No need to save window size since we use fixed dimensions
 
+            # Stop the scheduler first
+            try:
+                logger.info("Stopping scheduler from main window close event...")
+                self.scheduler.stop()
+            except Exception as e:
+                logger.exception(f"Error stopping scheduler on exit: {e}")
+
             # Save schedules
             try:
                 self.json_store.save(self.scheduler.get_schedules())
@@ -844,3 +851,8 @@ class MainWindow(QMainWindow):
     def set_app_exiting(self):
         """Mark the application as exiting to prevent minimize to tray."""
         self._is_app_exiting = True
+
+    def _on_tray_exit(self):
+        """Handle exit signal from system tray."""
+        self.set_app_exiting()
+        self.close()

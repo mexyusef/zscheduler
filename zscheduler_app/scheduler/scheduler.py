@@ -190,7 +190,12 @@ class Scheduler:
             self.running = False
             self._stop_event.set()
             if self._thread and self._thread.is_alive():
-                self._thread.join(timeout=2.0)
+                logger.info("Waiting for scheduler thread to stop...")
+                self._thread.join(timeout=5.0)  # Increased timeout
+                if self._thread.is_alive():
+                    logger.warning("Scheduler thread did not stop within timeout")
+                else:
+                    logger.info("Scheduler thread stopped successfully")
             logger.info("Scheduler stopped")
             return True
 
@@ -398,11 +403,54 @@ class Scheduler:
             schedule.last_run = datetime.now().isoformat()
             schedule.execution_count += 1
 
-            # Simulate execution (in a real implementation, this would actually run the command)
+            # Actually execute the command
             success = True
             try:
-                logger.debug("Would execute command: " + schedule.command)
-                time.sleep(0.1)  # Simulate execution time
+                logger.debug("Executing command: " + schedule.command)
+
+                # Try to parse as JSON first (for structured commands)
+                try:
+                    import json
+                    cmd_data = json.loads(schedule.command)
+
+                    # Handle Python tasks
+                    if isinstance(cmd_data, dict) and cmd_data.get("type") == "python":
+                        module_name = cmd_data["module"]
+                        function_name = cmd_data["function"]
+                        args_list = cmd_data.get("args", [])
+                        kwargs_dict = cmd_data.get("kwargs", {})
+
+                        logger.info(f"Executing Python function: {module_name}.{function_name}")
+
+                        # Import the module and get the function
+                        import importlib
+                        module = importlib.import_module(module_name)
+                        func = getattr(module, function_name)
+
+                        # Call the function
+                        result = func(*args_list, **kwargs_dict)
+                        logger.info(f"Python function executed successfully. Result: {result}")
+
+                    # Handle browser tasks (would need browser_launcher)
+                    elif isinstance(cmd_data, list) and cmd_data and cmd_data[0] == "launch_browser":
+                        logger.info("Browser task execution not implemented in scheduler daemon")
+                        # Could implement browser launching here if needed
+
+                    else:
+                        logger.warning(f"Unknown structured command format: {cmd_data}")
+
+                except json.JSONDecodeError:
+                    # Not JSON, treat as plain command
+                    logger.info(f"Executing shell command: {schedule.command}")
+                    import subprocess
+                    # Execute command without capturing output - let it run naturally
+                    result = subprocess.run(schedule.command, shell=True)
+                    if result.returncode == 0:
+                        logger.info(f"Command executed successfully")
+                    else:
+                        logger.error(f"Command failed with return code {result.returncode}")
+                        success = False
+
             except Exception as e:
                 logger.error("Error executing schedule " + schedule.name + ": " + str(e))
                 success = False
@@ -413,8 +461,14 @@ class Scheduler:
             else:
                 schedule.failure_count += 1
 
-            # Calculate next run time
-            schedule._calculate_next_run()
+            # Handle schedule lifecycle based on type
+            if schedule.schedule_type == "once":
+                # Remove one-time schedules after execution
+                logger.info("Removing one-time schedule: " + schedule.name)
+                del self.schedules[schedule_id]
+            else:
+                # Calculate next run time for recurring schedules
+                schedule._calculate_next_run()
 
             # Notify that the schedule completed
             if self._on_schedule_complete:
